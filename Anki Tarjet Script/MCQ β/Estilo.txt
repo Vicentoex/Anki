@@ -29,6 +29,11 @@
   border-color: #444;
 }
 
+/* Estilos para los indicadores de teclas en modo nocturno */
+.nightMode label span:first-child {
+  color: #999 !important;
+}
+
 /* Estilos para las opciones */
 #options-container-front label,
 #options-container-back div {
@@ -79,6 +84,16 @@
     font-size: 15px;
     padding: 12px;
   }
+  
+  /* Ocultar indicadores de tecla en móviles */
+  #options-container-front label span:first-child {
+    display: none;
+  }
+  
+  /* Ajustar margen en móviles */
+  #options-container-front {
+    margin-left: 0 !important;
+  }
 }
 
 /* Estilos para el mensaje de resultado */
@@ -127,6 +142,20 @@ label:focus-within {
   margin: 20px 0;
 }
 
+/* Estilo adicional para indicadores de teclas */
+#options-container-front label span:first-child {
+  font-family: 'Courier New', monospace;
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+}
+
+.nightMode #options-container-front label span:first-child {
+  background-color: #2a2a2a;
+  border-color: #555;
+}
+
 /* Mejorar legibilidad en pantallas pequeñas */
 @media (max-width: 480px) {
   .card {
@@ -144,4 +173,22 @@ body {
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* Estilo para resaltar opción seleccionada con teclado */
+#options-container-front label:has(input:focus) {
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+/* Información de atajos de teclado */
+.keyboard-help {
+  font-size: 12px;
+  color: #666;
+  margin-top: 10px;
+  text-align: center;
+  font-style: italic;
+}
+
+.nightMode .keyboard-help {
+  color: #999;
 }
