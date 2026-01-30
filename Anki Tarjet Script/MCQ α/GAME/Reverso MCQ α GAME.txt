@@ -1,0 +1,556 @@
+<!-- Back Template (Reverso) - Diseño Premium Optimizado para Móvil -->
+<div class="question-container">
+  <div class="question-text">
+    {{Anverso}}
+  </div>
+</div>
+
+<div id="streak-container" class="streak-display"></div>
+
+<div id="options-container-back" class="options-wrapper"></div>
+
+<div id="result-container">
+  <div id="result-message"></div>
+  <div id="score-animation"></div>
+</div>
+
+<div class="answer-section">
+  <div class="answer-header">
+    <span class="answer-icon">💡</span>
+    <span class="answer-label">Respuesta Correcta</span>
+  </div>
+  <div id="correct-answer-display" class="correct-answer-text">{{Answer}}</div>
+</div>
+
+<div class="notes-section">
+  <div class="notes-header">
+    <span class="notes-icon">📝</span>
+    <span class="notes-label">Notas de Estudio</span>
+  </div>
+  <div class="notes-content">
+    {{Notas}}
+  </div>
+</div>
+
+<div id="achievement-popup" class="achievement-hidden"></div>
+
+<script>
+(function() {
+  // Bandera para evitar ejecución múltiple
+  let hasProcessed = false;
+  
+  // Misma función para generar la clave única de la pregunta
+  function generateQuestionKey(content) {
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return 'anki_q_' + Math.abs(hash);
+  }
+  
+  const questionText = `{{Anverso}}`.trim();
+  const questionKey = generateQuestionKey(questionText);
+  
+  // Claves únicas para esta pregunta específica
+  const SHUFFLE_KEY = questionKey + '_shuffle';
+  const SELECTION_KEY = questionKey + '_selection';
+  const STREAK_KEY = 'anki_streak_count';
+  const TOTAL_CORRECT_KEY = 'anki_total_correct';
+  const TOTAL_ATTEMPTS_KEY = 'anki_total_attempts';
+  
+  // Función para mostrar achievements
+  function showAchievement(title, description, icon) {
+    const popup = document.getElementById('achievement-popup');
+    if (popup) {
+      popup.innerHTML = `
+        <div class="achievement-icon">${icon}</div>
+        <div class="achievement-content">
+          <div class="achievement-title">${title}</div>
+          <div class="achievement-description">${description}</div>
+        </div>
+      `;
+      popup.classList.remove('achievement-hidden');
+      popup.classList.add('achievement-show');
+      
+      setTimeout(() => {
+        popup.classList.remove('achievement-show');
+        popup.classList.add('achievement-hidden');
+      }, 2500);
+    }
+  }
+  
+  // Función para actualizar y mostrar estadísticas
+  function updateStats(isCorrect, hasSelection) {
+    if (!hasSelection) return;
+    
+    let streak = parseInt(sessionStorage.getItem(STREAK_KEY) || '0');
+    let totalCorrect = parseInt(sessionStorage.getItem(TOTAL_CORRECT_KEY) || '0');
+    let totalAttempts = parseInt(sessionStorage.getItem(TOTAL_ATTEMPTS_KEY) || '0');
+    
+    totalAttempts++;
+    
+    if (isCorrect) {
+      streak++;
+      totalCorrect++;
+      
+      // Achievements por racha
+      if (streak === 3) {
+        showAchievement('¡En Racha!', '3 correctas seguidas', '🔥');
+      } else if (streak === 5) {
+        showAchievement('¡Imparable!', '5 correctas seguidas', '⚡');
+      } else if (streak === 10) {
+        showAchievement('¡Maestro!', '10 correctas seguidas', '🏆');
+      }
+    } else {
+      streak = 0;
+    }
+    
+    sessionStorage.setItem(STREAK_KEY, streak);
+    sessionStorage.setItem(TOTAL_CORRECT_KEY, totalCorrect);
+    sessionStorage.setItem(TOTAL_ATTEMPTS_KEY, totalAttempts);
+    
+    // Mostrar racha actual solo si es mayor a 1
+    const streakContainer = document.getElementById('streak-container');
+    if (streakContainer && streak > 1) {
+      streakContainer.innerHTML = `
+        <div class="streak-badge">
+          <span class="streak-icon">🔥</span>
+          <span class="streak-number">${streak}</span>
+          <span class="streak-text">Racha</span>
+        </div>
+      `;
+    }
+  }
+  
+  function showResults() {
+    // Evitar ejecución múltiple
+    if (hasProcessed) return;
+    hasProcessed = true;
+    
+    const correctAnswer = `{{Answer}}`.trim();
+    const container = document.getElementById('options-container-back');
+    const resultMessageEl = document.getElementById('result-message');
+    const correctAnswerDisplayEl = document.getElementById('correct-answer-display');
+    
+    if (!container || !resultMessageEl || !correctAnswerDisplayEl) return;
+    
+    // Mostrar respuesta correcta
+    correctAnswerDisplayEl.textContent = correctAnswer;
+    
+    // Obtener las opciones barajadas del sessionStorage
+    let options;
+    try {
+      const shuffledData = sessionStorage.getItem(SHUFFLE_KEY);
+      if (shuffledData) {
+        options = JSON.parse(shuffledData);
+      } else {
+        options = [
+          `{{Opción 1}}`.trim(),
+          `{{Opción 2}}`.trim(),
+          `{{Opción 3}}`.trim()
+        ].filter(opt => opt !== '');
+      }
+    } catch (e) {
+      console.error('Error al recuperar opciones:', e);
+      options = [
+        `{{Opción 1}}`.trim(),
+        `{{Opción 2}}`.trim(),
+        `{{Opción 3}}`.trim()
+      ].filter(opt => opt !== '');
+    }
+    
+    // Obtener la selección del usuario
+    const userChoice = sessionStorage.getItem(SELECTION_KEY);
+    const hasSelection = !!userChoice;
+    const isCorrect = hasSelection && userChoice === correctAnswer;
+    
+    // Actualizar estadísticas
+    updateStats(isCorrect, hasSelection);
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Mostrar todas las opciones con estilos apropiados
+    options.forEach((option, index) => {
+      const div = document.createElement('div');
+      div.className = 'option-result';
+      
+      const optionLetter = document.createElement('span');
+      optionLetter.className = 'option-letter';
+      optionLetter.textContent = String.fromCharCode(65 + index) + '.';
+      
+      const optionText = document.createElement('span');
+      optionText.className = 'option-text-result';
+      optionText.textContent = option;
+      
+      div.appendChild(optionLetter);
+      div.appendChild(optionText);
+      
+      // Aplicar estilos según el estado de la opción
+      if (option === correctAnswer) {
+        div.classList.add('correct');
+        
+        const checkmark = document.createElement('span');
+        checkmark.className = 'result-icon';
+        checkmark.textContent = '✓';
+        checkmark.style.cssText = `
+          color: #10b981;
+          font-weight: bold;
+          margin-left: auto;
+          font-size: 18px;
+        `;
+        div.appendChild(checkmark);
+        
+      } else if (hasSelection && option === userChoice) {
+        div.classList.add('user-wrong');
+        
+        const xmark = document.createElement('span');
+        xmark.className = 'result-icon';
+        xmark.textContent = '✗';
+        xmark.style.cssText = `
+          color: #ef4444;
+          font-weight: bold;
+          margin-left: auto;
+          font-size: 18px;
+        `;
+        div.appendChild(xmark);
+      } else {
+        div.classList.add('incorrect');
+      }
+      
+      container.appendChild(div);
+    });
+    
+    // Mostrar mensaje de resultado
+    if (!hasSelection) {
+      resultMessageEl.textContent = '⚠️ No seleccionaste ninguna opción';
+      resultMessageEl.className = 'warning';
+      
+    } else if (isCorrect) {
+      const messages = [
+        '🎉 ¡EXCELENTE!',
+        '🌟 ¡BRILLANTE!',
+        '🚀 ¡PERFECTO!',
+        '💯 ¡CORRECTO!',
+        '🏆 ¡MUY BIEN!'
+      ];
+      resultMessageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+      resultMessageEl.className = 'success';
+      
+      // Vibración de éxito (móviles)
+      if (navigator.vibrate) {
+        navigator.vibrate([30, 20, 30]);
+      }
+      
+      // Mostrar puntos ganados
+      const scoreAnimation = document.getElementById('score-animation');
+      if (scoreAnimation) {
+        scoreAnimation.innerHTML = '+10 XP';
+        scoreAnimation.style.cssText = `
+          position: absolute;
+          color: #10b981;
+          font-size: 20px;
+          font-weight: bold;
+          animation: floatUp 1.2s ease-out forwards;
+          left: 50%;
+          transform: translateX(-50%);
+        `;
+        setTimeout(() => {
+          scoreAnimation.innerHTML = '';
+        }, 1200);
+      }
+      
+    } else {
+      const messages = [
+        '❌ Incorrecto',
+        '😔 No es correcto',
+        '💪 Sigue intentando',
+        '📚 Revisa las notas'
+      ];
+      resultMessageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+      resultMessageEl.className = 'error';
+      
+      // Vibración de error (móviles)
+      if (navigator.vibrate) {
+        navigator.vibrate(150);
+      }
+    }
+    
+    // Animar entrada de elementos
+    const answerSection = document.querySelector('.answer-section');
+    const notesSection = document.querySelector('.notes-section');
+    
+    if (answerSection) {
+      answerSection.style.animation = 'slideInFromBottom 0.3s ease 0.1s backwards';
+    }
+    if (notesSection) {
+      notesSection.style.animation = 'slideInFromBottom 0.3s ease 0.2s backwards';
+    }
+    
+    // Limpiar sessionStorage para esta pregunta después de mostrar resultados
+    setTimeout(function() {
+      sessionStorage.removeItem(SHUFFLE_KEY);
+      sessionStorage.removeItem(SELECTION_KEY);
+    }, 100);
+  }
+  
+  // Ejecutar inmediatamente
+  showResults();
+  
+  // Asegurar que se ejecute incluso con diferentes timings
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showResults);
+  } else {
+    setTimeout(showResults, 0);
+  }
+})();
+</script>
+
+<style>
+/* Estilos específicos del reverso - Compacto para móvil */
+
+.streak-display {
+  text-align: center;
+  margin: 8px 0;
+}
+
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.25);
+}
+
+.streak-icon {
+  font-size: 16px;
+  animation: flameFlicker 1.2s ease-in-out infinite;
+}
+
+.streak-number {
+  font-size: 16px;
+}
+
+.streak-text {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.answer-header, .notes-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.answer-icon, .notes-icon {
+  font-size: 18px;
+}
+
+.correct-answer-text {
+  font-size: 17px;
+  font-weight: bold;
+  color: #10b981;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.08));
+  border-radius: 8px;
+  text-align: center;
+}
+
+.notes-content {
+  color: #374151;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.option-letter {
+  font-weight: bold;
+  color: #6b7280;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.option-text-result {
+  flex: 1;
+}
+
+#result-container {
+  position: relative;
+  width: 100%;
+  max-width: 550px;
+}
+
+#score-animation {
+  z-index: 10;
+}
+
+/* Achievement Popup */
+#achievement-popup {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  left: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10000;
+  transition: all 0.4s ease;
+}
+
+.achievement-hidden {
+  transform: translateY(-100px);
+  opacity: 0;
+}
+
+.achievement-show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.achievement-icon {
+  font-size: 32px;
+}
+
+.achievement-content {
+  flex: 1;
+}
+
+.achievement-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.achievement-description {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Animaciones */
+@keyframes flameFlicker {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-3deg); }
+  75% { transform: scale(0.95) rotate(3deg); }
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-35px);
+  }
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideInFromBottom {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Modo nocturno para reverso */
+.nightMode .correct-answer-text {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.1));
+}
+
+.nightMode .notes-content {
+  color: #d1d5db;
+}
+
+.nightMode .answer-header,
+.nightMode .notes-header {
+  color: #9ca3af;
+}
+
+/* Responsive específico para reverso */
+@media (max-width: 768px) {
+  #achievement-popup {
+    padding: 12px;
+  }
+  
+  .achievement-icon {
+    font-size: 28px;
+  }
+  
+  .achievement-title {
+    font-size: 15px;
+  }
+  
+  .streak-badge {
+    padding: 5px 12px;
+    font-size: 13px;
+  }
+  
+  .correct-answer-text {
+    font-size: 16px;
+    padding: 8px 10px;
+  }
+  
+  .notes-content {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .streak-badge {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  
+  .streak-icon {
+    font-size: 14px;
+  }
+  
+  .streak-number {
+    font-size: 14px;
+  }
+  
+  .correct-answer-text {
+    font-size: 15px;
+  }
+}
+</style>

@@ -1,0 +1,185 @@
+<!-- Front Template (Anverso) - Diseño Premium Optimizado para Móvil -->
+<div class="helper-text">Selecciona tu respuesta</div>
+
+<div class="question-container">
+  <div class="question-text">
+    {{Anverso}}
+  </div>
+</div>
+
+<form id="quiz-front">
+  <div id="options-container-front" class="options-wrapper">
+    <!-- Las opciones se generarán dinámicamente -->
+  </div>
+</form>
+
+<script>
+(function() {
+  // Bandera para evitar ejecución múltiple
+  let hasGenerated = false;
+  
+  // Generamos una clave única basada en el contenido de la pregunta
+  function generateQuestionKey(content) {
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return 'anki_q_' + Math.abs(hash);
+  }
+  
+  const questionText = `{{Anverso}}`.trim();
+  const questionKey = generateQuestionKey(questionText);
+  
+  // Claves únicas para esta pregunta específica
+  const SHUFFLE_KEY = questionKey + '_shuffle';
+  const SELECTION_KEY = questionKey + '_selection';
+  const STREAK_KEY = 'anki_streak_count';
+  
+  // Array con las opciones originales
+  const originalOptions = [
+    `{{Opción 1}}`.trim(),
+    `{{Opción 2}}`.trim(),
+    `{{Opción 3}}`.trim()
+  ].filter(opt => opt !== '');
+  
+  // Fisher-Yates para barajar
+  function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  
+  // Función para animar la entrada de opciones
+  function animateOption(element, delay) {
+    element.style.opacity = '0';
+    element.style.transform = 'translateY(8px)';
+    setTimeout(() => {
+      element.style.transition = 'all 0.25s ease-out';
+      element.style.opacity = '1';
+      element.style.transform = 'translateY(0)';
+    }, delay);
+  }
+  
+  function generateOptions() {
+    // Evitar ejecución múltiple
+    if (hasGenerated) return;
+    
+    const container = document.getElementById('options-container-front');
+    if (!container || originalOptions.length === 0) return;
+    
+    hasGenerated = true;
+    
+    // Limpiar selección previa de esta tarjeta específica
+    sessionStorage.removeItem(SELECTION_KEY);
+    
+    // Barajar las opciones
+    const shuffledOptions = shuffleArray(originalOptions);
+    
+    // Guardar el orden barajado para esta pregunta específica
+    sessionStorage.setItem(SHUFFLE_KEY, JSON.stringify(shuffledOptions));
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Crear los radio buttons con animación
+    shuffledOptions.forEach((option, index) => {
+      const optionDiv = document.createElement('div');
+      optionDiv.className = 'option-card';
+      
+      const label = document.createElement('label');
+      label.className = 'option-label';
+      
+      // Crear el contenedor del radio button
+      const radioWrapper = document.createElement('div');
+      radioWrapper.className = 'radio-wrapper';
+      
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'mcq_choice';
+      input.value = option;
+      input.id = 'option_' + index;
+      input.className = 'option-input';
+      
+      const customRadio = document.createElement('span');
+      customRadio.className = 'custom-radio';
+      
+      const optionText = document.createElement('span');
+      optionText.className = 'option-text';
+      optionText.textContent = option;
+      
+      // Guardar la selección cuando cambie
+      input.addEventListener('change', function() {
+        sessionStorage.setItem(SELECTION_KEY, option);
+        
+        // Actualizar estilos visuales con animación
+        container.querySelectorAll('.option-card').forEach(card => {
+          card.classList.remove('selected');
+        });
+        optionDiv.classList.add('selected');
+        
+        // Feedback visual
+        optionDiv.style.animation = 'selectPulse 0.3s ease';
+        setTimeout(() => {
+          optionDiv.style.animation = '';
+        }, 300);
+        
+        // Actualizar helper text
+        const helperText = document.querySelector('.helper-text');
+        if (helperText) {
+          helperText.classList.add('ready');
+          helperText.textContent = '✓ Respuesta seleccionada';
+        }
+        
+        // Vibración suave en móviles (si está soportado)
+        if (navigator.vibrate) {
+          navigator.vibrate(15);
+        }
+      });
+      
+      radioWrapper.appendChild(input);
+      radioWrapper.appendChild(customRadio);
+      
+      label.appendChild(radioWrapper);
+      label.appendChild(optionText);
+      
+      optionDiv.appendChild(label);
+      container.appendChild(optionDiv);
+      
+      // Animar entrada
+      animateOption(optionDiv, 40 * (index + 1));
+    });
+  }
+  
+  // Función para verificar y regenerar si es necesario
+  function checkAndGenerate() {
+    const container = document.getElementById('options-container-front');
+    if (container && !container.querySelector('input[type="radio"]')) {
+      hasGenerated = false;
+      generateOptions();
+    }
+  }
+  
+  // Generar opciones inicialmente
+  generateOptions();
+  
+  // Verificación periódica para asegurar que las opciones estén presentes
+  let checkCount = 0;
+  const checkInterval = setInterval(function() {
+    checkCount++;
+    checkAndGenerate();
+    if (checkCount >= 8) {
+      clearInterval(checkInterval);
+    }
+  }, 100);
+  
+  // También verificar cuando el DOM esté completamente cargado
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAndGenerate);
+  }
+})();
+</script>
