@@ -1,0 +1,237 @@
+<!-- Front Template (Anverso) - Diseño Minimalista Optimizado -->
+<div class="helper-text">Selecciona tu respuesta</div>
+
+<div class="question-container">
+  <div class="question-text">
+    {{Anverso}}
+  </div>
+</div>
+
+<form id="quiz-front">
+  <div id="options-container-front" class="options-wrapper">
+    <!-- Las opciones se generarán dinámicamente -->
+  </div>
+</form>
+
+<div class="skip-button-container">
+  <button type="button" class="skip-button" id="skip-btn">
+    <span>🤷</span> No lo sé
+  </button>
+</div>
+
+<div class="keyboard-hint">
+  Atajos: <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> para opciones · <kbd>N</kbd> para saltar
+</div>
+
+<script>
+(function() {
+  // Generamos una clave única basada en el contenido de la pregunta
+  function generateQuestionKey(content) {
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return 'anki_q_' + Math.abs(hash);
+  }
+  
+  const questionText = `{{Anverso}}`.trim();
+  const questionKey = generateQuestionKey(questionText);
+  
+  // Claves únicas para esta pregunta específica
+  const SHUFFLE_KEY = questionKey + '_shuffle';
+  const SELECTION_KEY = questionKey + '_selection';
+  const EXPLANATIONS_KEY = questionKey + '_explanations';
+  const SKIPPED_KEY = questionKey + '_skipped';
+  
+  // Array con las opciones originales y sus explicaciones
+  const optionsData = [
+    { text: `{{Opción 1}}`.trim(), explanation: `{{E 1}}`.trim() },
+    { text: `{{Opción 2}}`.trim(), explanation: `{{E 2}}`.trim() },
+    { text: `{{Opción 3}}`.trim(), explanation: `{{E 3}}`.trim() }
+  ].filter(opt => opt.text !== '');
+  
+  // Fisher-Yates para barajar
+  function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  
+  // Función para mostrar respuesta (compatible con todas las plataformas)
+  function showAnswerCard() {
+    if (typeof window.showAnswer !== 'undefined') {
+      window.showAnswer();
+    } else if (typeof pycmd !== 'undefined') {
+      pycmd('ans');
+    } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cb) {
+      window.webkit.messageHandlers.cb.postMessage('ans');
+    }
+  }
+  
+  // Referencias a los inputs para atajos de teclado
+  let optionInputs = [];
+  
+  function generateOptions() {
+    const container = document.getElementById('options-container-front');
+    if (!container || optionsData.length === 0) return;
+    
+    // Limpiar selección previa y skipped
+    sessionStorage.removeItem(SELECTION_KEY);
+    sessionStorage.removeItem(SKIPPED_KEY);
+    
+    // Barajar las opciones
+    const shuffledOptions = shuffleArray(optionsData);
+    
+    // Guardar el orden barajado para esta pregunta específica
+    sessionStorage.setItem(SHUFFLE_KEY, JSON.stringify(shuffledOptions.map(o => o.text)));
+    
+    // Guardar el mapeo de explicaciones
+    const explanationsMap = {};
+    shuffledOptions.forEach(opt => {
+      explanationsMap[opt.text] = opt.explanation;
+    });
+    sessionStorage.setItem(EXPLANATIONS_KEY, JSON.stringify(explanationsMap));
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    optionInputs = [];
+    
+    // Teclas para atajos (J, K, L)
+    const keys = ['J', 'K', 'L'];
+    
+    // Crear los radio buttons
+    shuffledOptions.forEach((option, index) => {
+      const optionDiv = document.createElement('div');
+      optionDiv.className = 'option-card';
+      
+      const label = document.createElement('label');
+      label.className = 'option-label';
+      
+      // Indicador de tecla
+      const keyIndicator = document.createElement('span');
+      keyIndicator.className = 'option-key';
+      keyIndicator.textContent = keys[index] || '';
+      
+      // Crear el contenedor del radio button
+      const radioWrapper = document.createElement('div');
+      radioWrapper.className = 'radio-wrapper';
+      
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'mcq_choice';
+      input.value = option.text;
+      input.id = 'option_' + index;
+      input.className = 'option-input';
+      
+      // Guardar referencia para atajos
+      optionInputs.push(input);
+      
+      const customRadio = document.createElement('span');
+      customRadio.className = 'custom-radio';
+      
+      const optionText = document.createElement('span');
+      optionText.className = 'option-text';
+      optionText.textContent = option.text;
+      
+      // Guardar la selección cuando cambie
+      input.addEventListener('change', function() {
+        sessionStorage.setItem(SELECTION_KEY, option.text);
+        sessionStorage.removeItem(SKIPPED_KEY);
+        
+        // Actualizar estilos visuales
+        container.querySelectorAll('.option-card').forEach(card => {
+          card.classList.remove('selected');
+        });
+        optionDiv.classList.add('selected');
+        
+        // Vibración suave en móviles
+        if (navigator.vibrate) {
+          navigator.vibrate(10);
+        }
+        
+        // Mostrar respuesta automáticamente
+        showAnswerCard();
+      });
+      
+      radioWrapper.appendChild(input);
+      radioWrapper.appendChild(customRadio);
+      
+      label.appendChild(keyIndicator);
+      label.appendChild(radioWrapper);
+      label.appendChild(optionText);
+      
+      optionDiv.appendChild(label);
+      container.appendChild(optionDiv);
+    });
+  }
+  
+  // Botón "No lo sé"
+  function handleSkip() {
+    sessionStorage.removeItem(SELECTION_KEY);
+    sessionStorage.setItem(SKIPPED_KEY, 'true');
+    
+    // Vibración
+    if (navigator.vibrate) {
+      navigator.vibrate(20);
+    }
+    
+    showAnswerCard();
+  }
+  
+  const skipBtn = document.getElementById('skip-btn');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', handleSkip);
+  }
+  
+  // Atajos de teclado (J, K, L, N)
+  function handleKeyPress(e) {
+    // Ignorar si hay un input de texto activo
+    if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
+    if (e.target.tagName === 'TEXTAREA') return;
+    
+    const key = e.key.toLowerCase();
+    
+    // J, K, L para opciones
+    if (key === 'j' && optionInputs[0]) {
+      e.preventDefault();
+      optionInputs[0].checked = true;
+      optionInputs[0].dispatchEvent(new Event('change'));
+    } else if (key === 'k' && optionInputs[1]) {
+      e.preventDefault();
+      optionInputs[1].checked = true;
+      optionInputs[1].dispatchEvent(new Event('change'));
+    } else if (key === 'l' && optionInputs[2]) {
+      e.preventDefault();
+      optionInputs[2].checked = true;
+      optionInputs[2].dispatchEvent(new Event('change'));
+    } else if (key === 'n') {
+      // N para "No lo sé"
+      e.preventDefault();
+      handleSkip();
+    }
+  }
+  
+  document.addEventListener('keydown', handleKeyPress);
+  
+  // Generar opciones inicialmente
+  generateOptions();
+  
+  // Verificación periódica
+  let checkCount = 0;
+  const checkInterval = setInterval(function() {
+    checkCount++;
+    const container = document.getElementById('options-container-front');
+    if (container && !container.querySelector('input[type="radio"]')) {
+      generateOptions();
+    }
+    if (checkCount >= 10) {
+      clearInterval(checkInterval);
+    }
+  }, 100);
+})();
+</script>

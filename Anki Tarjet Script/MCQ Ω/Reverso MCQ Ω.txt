@@ -1,0 +1,710 @@
+<!-- Back Template (Reverso) - Diseño Minimalista Optimizado -->
+
+<!-- Botón de sonido -->
+<div class="sound-toggle" id="sound-toggle" title="Activar/Desactivar sonidos">🔊</div>
+
+<!-- Botón de estadísticas -->
+<div class="stats-toggle" id="stats-toggle" title="Ver estadísticas">📊</div>
+
+<div class="question-container">
+  <div class="question-text">
+    {{Anverso}}
+  </div>
+</div>
+
+<div id="streak-container" class="streak-display"></div>
+
+<div id="options-container-back" class="options-wrapper"></div>
+
+<div id="result-message"></div>
+
+<!-- Frase motivacional -->
+<div id="motivational-container"></div>
+
+<!-- Contenedor para celebración y logros -->
+<div id="celebration-container"></div>
+<div id="achievement-container"></div>
+
+<script>
+(function() {
+  // Bandera para evitar doble ejecución
+  let hasExecuted = false;
+  
+  // ========== SISTEMA DE SONIDO ==========
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+  
+  function initAudio() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new AudioContext();
+      } catch(e) {
+        return null;
+      }
+    }
+    return audioCtx;
+  }
+  
+  function playTone(frequency, duration, type, volume) {
+    type = type || 'sine';
+    volume = volume || 0.3;
+    if (localStorage.getItem('anki_sound_muted') === 'true') return;
+    
+    try {
+      const ctx = initAudio();
+      if (!ctx) return;
+      
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.frequency.value = frequency;
+      oscillator.type = type;
+      
+      gainNode.gain.setValueAtTime(volume, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + duration);
+    } catch (e) {
+      console.log('Audio not supported');
+    }
+  }
+  
+  function playCorrectSound() {
+    playTone(523.25, 0.1);
+    setTimeout(function() { playTone(659.25, 0.1); }, 100);
+    setTimeout(function() { playTone(783.99, 0.15); }, 200);
+  }
+  
+  function playWrongSound() {
+    playTone(200, 0.3, 'sawtooth', 0.2);
+  }
+  
+  function playSkipSound() {
+    playTone(350, 0.15, 'triangle', 0.2);
+  }
+  
+  function playAchievementSound() {
+    playTone(523.25, 0.1);
+    setTimeout(function() { playTone(659.25, 0.1); }, 100);
+    setTimeout(function() { playTone(783.99, 0.1); }, 200);
+    setTimeout(function() { playTone(1046.50, 0.2); }, 300);
+  }
+  
+  // Configurar toggle de sonido
+  const soundToggle = document.getElementById('sound-toggle');
+  if (soundToggle) {
+    const isMuted = localStorage.getItem('anki_sound_muted') === 'true';
+    soundToggle.textContent = isMuted ? '🔇' : '🔊';
+    soundToggle.classList.toggle('muted', isMuted);
+    
+    soundToggle.addEventListener('click', function() {
+      const currentMuted = localStorage.getItem('anki_sound_muted') === 'true';
+      localStorage.setItem('anki_sound_muted', !currentMuted);
+      soundToggle.textContent = currentMuted ? '🔊' : '🔇';
+      soundToggle.classList.toggle('muted', !currentMuted);
+      
+      if (currentMuted) {
+        playTone(440, 0.1);
+      }
+    });
+  }
+  
+  // Configurar botón de estadísticas
+  const statsToggle = document.getElementById('stats-toggle');
+  if (statsToggle) {
+    statsToggle.addEventListener('click', function() {
+      showSessionSummary();
+    });
+  }
+  
+  // ========== CLAVES Y CONFIGURACIÓN ==========
+  function generateQuestionKey(content) {
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return 'anki_q_' + Math.abs(hash);
+  }
+  
+  const questionText = `{{Anverso}}`.trim();
+  const questionKey = generateQuestionKey(questionText);
+  
+  const SHUFFLE_KEY = questionKey + '_shuffle';
+  const SELECTION_KEY = questionKey + '_selection';
+  const EXPLANATIONS_KEY = questionKey + '_explanations';
+  const SKIPPED_KEY = questionKey + '_skipped';
+  const STREAK_KEY = 'anki_streak_count';
+  const BEST_STREAK_KEY = 'anki_best_streak';
+  const TOTAL_CORRECT_KEY = 'anki_total_correct';
+  const TOTAL_ATTEMPTS_KEY = 'anki_total_attempts';
+  const ACHIEVEMENTS_KEY = 'anki_achievements_v2';
+  const LAST_ACTIVITY_KEY = 'anki_last_activity';
+  
+  // ========== FRASES MOTIVACIONALES ==========
+  const motivationalQuotesSuccess = [
+    { emoji: '💪', text: '¡El conocimiento es poder! Sigue adelante' },
+    { emoji: '🎯', text: 'Cada pregunta correcta te acerca más a tu meta' },
+    { emoji: '⭐', text: 'La constancia vence lo que la dicha no alcanza' },
+    { emoji: '🌟', text: 'Tu esfuerzo de hoy es tu éxito de mañana' },
+    { emoji: '📚', text: 'Los expertos fueron una vez principiantes' },
+    { emoji: '🛤️', text: '¡Vas por muy buen camino!' },
+    { emoji: '🏆', text: 'La práctica hace al maestro' },
+    { emoji: '👣', text: 'Pequeños pasos llevan a grandes logros' },
+    { emoji: '🌱', text: 'Tu dedicación está dando frutos' },
+    { emoji: '🚀', text: '¡Excelente trabajo! Sigue así' }
+  ];
+  
+  const motivationalQuotesError = [
+    { emoji: '📖', text: 'Los errores son el camino hacia el aprendizaje' },
+    { emoji: '💪', text: 'Fallar es parte del proceso, ¡no te rindas!' },
+    { emoji: '🧠', text: 'De los errores se aprende más que de los aciertos' },
+    { emoji: '⬆️', text: 'Cada error es una oportunidad de mejorar' },
+    { emoji: '🔑', text: 'La perseverancia es la clave del éxito' },
+    { emoji: '🎯', text: 'No pasa nada, a la próxima lo clavarás' },
+    { emoji: '🌶️', text: 'El fracaso es el condimento que da sabor al éxito' },
+    { emoji: '🦾', text: 'Recuerda: equivocarse es humano, rendirse es opcional' },
+    { emoji: '📈', text: 'Este error te acerca más a dominar el tema' },
+    { emoji: '🏅', text: '¡Ánimo! Los campeones también fallan' }
+  ];
+  
+  // ========== SISTEMA DE LOGROS (AMPLIADO) ==========
+  const achievements = {
+    // Primeros pasos
+    first_correct: { name: 'Primera Victoria', icon: '🎯', desc: 'Acertar tu primera pregunta' },
+    first_ten: { name: 'Calentando Motores', icon: '🔥', desc: 'Completar 10 tarjetas' },
+    
+    // Rachas
+    streak_5: { name: 'En Racha', icon: '⚡', desc: 'Racha de 5 aciertos' },
+    streak_10: { name: 'Imparable', icon: '🌟', desc: 'Racha de 10 aciertos' },
+    streak_15: { name: 'Dominador', icon: '💫', desc: 'Racha de 15 aciertos' },
+    streak_20: { name: 'Leyenda', icon: '👑', desc: 'Racha de 20 aciertos' },
+    streak_25: { name: 'Mítico', icon: '🦄', desc: 'Racha de 25 aciertos' },
+    streak_50: { name: 'Inmortal', icon: '⚔️', desc: 'Racha de 50 aciertos' },
+    
+    // Cantidad de aciertos
+    correct_10: { name: 'Diez Perfectas', icon: '🌟', desc: '10 respuestas correctas' },
+    correct_25: { name: 'Cuarto de Cien', icon: '🎖️', desc: '25 respuestas correctas' },
+    correct_50: { name: 'Medio Centenar', icon: '💫', desc: '50 respuestas correctas' },
+    correct_100: { name: 'Centurión', icon: '🏆', desc: '100 respuestas correctas' },
+    correct_250: { name: 'Veterano', icon: '🎗️', desc: '250 respuestas correctas' },
+    correct_500: { name: 'Maestro', icon: '🧙', desc: '500 respuestas correctas' },
+    correct_1000: { name: 'Gran Maestro', icon: '👨‍🎓', desc: '1000 respuestas correctas' },
+    
+    // Cantidad de intentos (persistencia)
+    attempts_25: { name: 'Estudiante Aplicado', icon: '📚', desc: '25 tarjetas estudiadas' },
+    attempts_50: { name: 'Maratonista', icon: '🏃', desc: '50 tarjetas estudiadas' },
+    attempts_100: { name: 'Dedicado', icon: '💪', desc: '100 tarjetas estudiadas' },
+    attempts_250: { name: 'Comprometido', icon: '🎯', desc: '250 tarjetas estudiadas' },
+    attempts_500: { name: 'Incansable', icon: '🦾', desc: '500 tarjetas estudiadas' },
+    attempts_1000: { name: 'Máquina de Estudiar', icon: '🤖', desc: '1000 tarjetas estudiadas' },
+    
+    // Precisión (requiere mínimo de intentos)
+    accuracy_80: { name: 'Buen Ojo', icon: '👁️', desc: '80% precisión (mín. 20 tarjetas)' },
+    accuracy_90: { name: 'Precisión Láser', icon: '🎯', desc: '90% precisión (mín. 20 tarjetas)' },
+    accuracy_95: { name: 'Casi Perfecto', icon: '💎', desc: '95% precisión (mín. 30 tarjetas)' },
+    accuracy_100_20: { name: 'Perfeccionista', icon: '🏅', desc: '100% precisión en 20+ tarjetas' },
+    
+    // Mejor racha histórica
+    best_streak_10: { name: 'Récord Personal', icon: '📈', desc: 'Mejor racha de 10+' },
+    best_streak_25: { name: 'Récord Épico', icon: '🏔️', desc: 'Mejor racha de 25+' },
+    best_streak_50: { name: 'Récord Legendario', icon: '🗻', desc: 'Mejor racha de 50+' }
+  };
+  
+  function checkAchievementCondition(id, stats) {
+    switch(id) {
+      case 'first_correct': return stats.totalCorrect >= 1;
+      case 'first_ten': return stats.totalAttempts >= 10;
+      case 'streak_5': return stats.streak >= 5;
+      case 'streak_10': return stats.streak >= 10;
+      case 'streak_15': return stats.streak >= 15;
+      case 'streak_20': return stats.streak >= 20;
+      case 'streak_25': return stats.streak >= 25;
+      case 'streak_50': return stats.streak >= 50;
+      case 'correct_10': return stats.totalCorrect >= 10;
+      case 'correct_25': return stats.totalCorrect >= 25;
+      case 'correct_50': return stats.totalCorrect >= 50;
+      case 'correct_100': return stats.totalCorrect >= 100;
+      case 'correct_250': return stats.totalCorrect >= 250;
+      case 'correct_500': return stats.totalCorrect >= 500;
+      case 'correct_1000': return stats.totalCorrect >= 1000;
+      case 'attempts_25': return stats.totalAttempts >= 25;
+      case 'attempts_50': return stats.totalAttempts >= 50;
+      case 'attempts_100': return stats.totalAttempts >= 100;
+      case 'attempts_250': return stats.totalAttempts >= 250;
+      case 'attempts_500': return stats.totalAttempts >= 500;
+      case 'attempts_1000': return stats.totalAttempts >= 1000;
+      case 'accuracy_80': return stats.accuracy >= 80 && stats.totalAttempts >= 20;
+      case 'accuracy_90': return stats.accuracy >= 90 && stats.totalAttempts >= 20;
+      case 'accuracy_95': return stats.accuracy >= 95 && stats.totalAttempts >= 30;
+      case 'accuracy_100_20': return stats.accuracy >= 100 && stats.totalAttempts >= 20;
+      case 'best_streak_10': return stats.bestStreak >= 10;
+      case 'best_streak_25': return stats.bestStreak >= 25;
+      case 'best_streak_50': return stats.bestStreak >= 50;
+      default: return false;
+    }
+  }
+  
+  function getUnlockedAchievements() {
+    try {
+      const data = localStorage.getItem(ACHIEVEMENTS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  function saveUnlockedAchievements(list) {
+    try {
+      localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(list));
+    } catch (e) {
+      console.log('Error saving achievements');
+    }
+  }
+  
+  function checkAchievements(stats) {
+    const unlocked = getUnlockedAchievements();
+    const newAchievements = [];
+    
+    for (const id in achievements) {
+      if (unlocked.indexOf(id) === -1 && checkAchievementCondition(id, stats)) {
+        unlocked.push(id);
+        newAchievements.push(achievements[id]);
+      }
+    }
+    
+    if (newAchievements.length > 0) {
+      saveUnlockedAchievements(unlocked);
+    }
+    
+    return newAchievements;
+  }
+  
+  function showAchievement(achievement) {
+    const container = document.getElementById('achievement-container');
+    if (!container) return;
+    
+    const popup = document.createElement('div');
+    popup.className = 'achievement-popup';
+    popup.innerHTML = '<span class="achievement-icon">' + achievement.icon + '</span>' +
+      '<div class="achievement-title">¡Logro Desbloqueado!</div>' +
+      '<div class="achievement-name">' + achievement.name + '</div>';
+    
+    container.appendChild(popup);
+    playAchievementSound();
+    
+    setTimeout(function() {
+      if (popup.parentNode) {
+        popup.parentNode.removeChild(popup);
+      }
+    }, 3500);
+  }
+  
+  // ========== MENSAJES DE CELEBRACIÓN (múltiplos de 5) ==========
+  const celebrationMessages = {
+    5: { emoji: '🔥', text: '¡RACHA DE' },
+    10: { emoji: '⚡', text: '¡IMPARABLE!' },
+    15: { emoji: '🌟', text: '¡BRILLANTE!' },
+    20: { emoji: '🚀', text: '¡LEGENDARIO!' },
+    25: { emoji: '👑', text: '¡ÉPICO!' },
+    30: { emoji: '💎', text: '¡DIAMANTE!' },
+    default: { emoji: '🔥', text: '¡INCREÍBLE!' }
+  };
+  
+  const confettiColors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff9f43', '#10ac84', '#ee5a24'];
+  
+  function createConfetti() {
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    container.id = 'confetti-container';
+    
+    for (let i = 0; i < 100; i++) {
+      const confetti = document.createElement('div');
+      const shapes = ['confetti-square', 'confetti-circle', 'confetti-triangle'];
+      confetti.className = 'confetti ' + shapes[Math.floor(Math.random() * shapes.length)];
+      confetti.style.setProperty('--confetti-color', confettiColors[Math.floor(Math.random() * confettiColors.length)]);
+      confetti.style.left = Math.random() * 100 + '%';
+      confetti.style.animationDelay = Math.random() * 0.5 + 's';
+      confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+      container.appendChild(confetti);
+    }
+    
+    return container;
+  }
+  
+  function createEpicCelebration(streak) {
+    const celebrationContainer = document.getElementById('celebration-container');
+    if (!celebrationContainer) return;
+    
+    let messageData = celebrationMessages[streak] || celebrationMessages.default;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'streak-celebration-overlay';
+    overlay.id = 'streak-celebration';
+    overlay.innerHTML = '<div class="shockwave shockwave-1"></div>' +
+      '<div class="shockwave shockwave-2"></div>' +
+      '<div class="shockwave shockwave-3"></div>' +
+      '<div class="streak-celebration-content">' +
+        '<span class="streak-celebration-emoji">' + messageData.emoji + '</span>' +
+        '<div class="streak-celebration-text">' + messageData.text + '</div>' +
+        '<div class="streak-celebration-number">' + streak + '</div>' +
+      '</div>';
+    
+    const confetti = createConfetti();
+    document.body.appendChild(confetti);
+    celebrationContainer.appendChild(overlay);
+    
+    if (navigator.vibrate) {
+      navigator.vibrate([50, 30, 50, 30, 100]);
+    }
+    
+    setTimeout(function() {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      const confettiEl = document.getElementById('confetti-container');
+      if (confettiEl && confettiEl.parentNode) confettiEl.parentNode.removeChild(confettiEl);
+    }, 3000);
+  }
+  
+  // ========== RESUMEN DE SESIÓN ==========
+  function showSessionSummary() {
+    const totalAttempts = parseInt(localStorage.getItem(TOTAL_ATTEMPTS_KEY) || '0');
+    const totalCorrect = parseInt(localStorage.getItem(TOTAL_CORRECT_KEY) || '0');
+    const bestStreak = parseInt(localStorage.getItem(BEST_STREAK_KEY) || '0');
+    const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+    
+    if (totalAttempts < 5) return;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'session-summary-overlay';
+    overlay.id = 'session-summary';
+    overlay.innerHTML = '<div class="session-summary-card">' +
+      '<h2>📊 Resumen de Sesión</h2>' +
+      '<div class="summary-stats">' +
+        '<div class="summary-stat"><div class="stat-label">Tarjetas</div><div class="stat-value">' + totalAttempts + '</div></div>' +
+        '<div class="summary-stat highlight"><div class="stat-label">Correctas</div><div class="stat-value">' + totalCorrect + '</div></div>' +
+        '<div class="summary-stat highlight"><div class="stat-label">Precisión</div><div class="stat-value">' + accuracy + '%</div></div>' +
+        '<div class="summary-stat streak"><div class="stat-label">Mejor Racha</div><div class="stat-value">' + bestStreak + '</div></div>' +
+      '</div>' +
+      '<button class="close-btn" id="close-summary">Continuar</button>' +
+    '</div>';
+    
+    document.body.appendChild(overlay);
+    
+    document.getElementById('close-summary').addEventListener('click', function() {
+      overlay.remove();
+      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    });
+    
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) {
+        overlay.remove();
+        localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+      }
+    });
+  }
+  
+  function checkInactivity() {
+    const lastActivity = parseInt(localStorage.getItem(LAST_ACTIVITY_KEY) || '0');
+    const now = Date.now();
+    const inactiveTime = now - lastActivity;
+    
+    if (lastActivity > 0 && inactiveTime > 180000) {
+      const totalAttempts = parseInt(localStorage.getItem(TOTAL_ATTEMPTS_KEY) || '0');
+      if (totalAttempts >= 5) {
+        showSessionSummary();
+      }
+    }
+    
+    localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
+  }
+  
+  // ========== ESTADÍSTICAS ==========
+  function updateStats(isCorrect, hasSelection, wasSkipped) {
+    let streak = parseInt(localStorage.getItem(STREAK_KEY) || '0');
+    let bestStreak = parseInt(localStorage.getItem(BEST_STREAK_KEY) || '0');
+    let totalCorrect = parseInt(localStorage.getItem(TOTAL_CORRECT_KEY) || '0');
+    let totalAttempts = parseInt(localStorage.getItem(TOTAL_ATTEMPTS_KEY) || '0');
+    
+    totalAttempts++;
+    
+    if (isCorrect) {
+      streak++;
+      totalCorrect++;
+      if (streak > bestStreak) {
+        bestStreak = streak;
+        localStorage.setItem(BEST_STREAK_KEY, bestStreak.toString());
+      }
+    } else {
+      streak = 0;
+    }
+    
+    localStorage.setItem(STREAK_KEY, streak.toString());
+    localStorage.setItem(TOTAL_CORRECT_KEY, totalCorrect.toString());
+    localStorage.setItem(TOTAL_ATTEMPTS_KEY, totalAttempts.toString());
+    localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    
+    const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+    const showCelebration = isCorrect && streak > 0 && streak % 5 === 0;
+    
+    // Mostrar racha (si no es múltiplo de 5)
+    const streakContainer = document.getElementById('streak-container');
+    if (streakContainer && streak > 2 && !showCelebration) {
+      streakContainer.innerHTML = '<div class="streak-badge">' +
+        '<span class="streak-icon">🔥</span>' +
+        '<span class="streak-number">' + streak + '</span>' +
+        '<span class="streak-text">racha</span>' +
+      '</div>';
+    }
+    
+    // Verificar logros
+    const newAchievements = checkAchievements({
+      streak: streak,
+      bestStreak: bestStreak,
+      totalCorrect: totalCorrect,
+      totalAttempts: totalAttempts,
+      accuracy: accuracy
+    });
+    
+    // Mostrar logros nuevos
+    newAchievements.forEach(function(achievement, index) {
+      setTimeout(function() { showAchievement(achievement); }, 500 + (index * 3500));
+    });
+    
+    return { streak: streak, showCelebration: showCelebration, accuracy: accuracy };
+  }
+  
+  // ========== MOSTRAR RESULTADOS ==========
+  function showResults() {
+    if (hasExecuted) return;
+    hasExecuted = true;
+    
+    const correctAnswer = `{{Answer}}`.trim();
+    const container = document.getElementById('options-container-back');
+    const resultMessageEl = document.getElementById('result-message');
+    
+    if (!container || !resultMessageEl) return;
+    
+    // Obtener opciones
+    let options;
+    try {
+      const shuffledData = sessionStorage.getItem(SHUFFLE_KEY);
+      options = shuffledData ? JSON.parse(shuffledData) : [
+        `{{Opción 1}}`.trim(),
+        `{{Opción 2}}`.trim(),
+        `{{Opción 3}}`.trim()
+      ].filter(function(opt) { return opt !== ''; });
+    } catch (e) {
+      options = [`{{Opción 1}}`.trim(), `{{Opción 2}}`.trim(), `{{Opción 3}}`.trim()].filter(function(opt) { return opt !== ''; });
+    }
+    
+    // Obtener explicaciones
+    let explanations = {};
+    try {
+      const explanationsData = sessionStorage.getItem(EXPLANATIONS_KEY);
+      if (explanationsData) explanations = JSON.parse(explanationsData);
+    } catch (e) {}
+    
+    if (Object.keys(explanations).length === 0) {
+      var opt1 = `{{Opción 1}}`.trim();
+      var opt2 = `{{Opción 2}}`.trim();
+      var opt3 = `{{Opción 3}}`.trim();
+      var exp1 = `{{E 1}}`.trim();
+      var exp2 = `{{E 2}}`.trim();
+      var exp3 = `{{E 3}}`.trim();
+      if (opt1) explanations[opt1] = exp1;
+      if (opt2) explanations[opt2] = exp2;
+      if (opt3) explanations[opt3] = exp3;
+    }
+    
+    // Obtener selección
+    const userChoice = sessionStorage.getItem(SELECTION_KEY);
+    const wasSkipped = sessionStorage.getItem(SKIPPED_KEY) === 'true';
+    const hasSelection = !!userChoice && !wasSkipped;
+    const isCorrect = hasSelection && userChoice === correctAnswer;
+    
+    // Actualizar estadísticas
+    const statsResult = updateStats(isCorrect, hasSelection, wasSkipped);
+    const streak = statsResult.streak;
+    const showCelebration = statsResult.showCelebration;
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Mostrar opciones
+    options.forEach(function(option) {
+      const div = document.createElement('div');
+      div.className = 'option-result';
+      
+      const optionText = document.createElement('span');
+      optionText.className = 'option-text-result';
+      optionText.textContent = option;
+      div.appendChild(optionText);
+      
+      let showExplanation = false;
+      
+      if (option === correctAnswer) {
+        div.classList.add('correct');
+        showExplanation = true;
+      } else if (hasSelection && option === userChoice) {
+        div.classList.add('user-wrong');
+        showExplanation = true;
+      } else if (wasSkipped && option === correctAnswer) {
+        div.classList.add('correct');
+        showExplanation = true;
+      } else {
+        div.classList.add('incorrect');
+      }
+      
+      // Añadir explicación expandible (siempre con toggle)
+      if (showExplanation && explanations[option] && explanations[option] !== '') {
+        const explanationWrapper = document.createElement('div');
+        explanationWrapper.className = 'explanation-wrapper';
+        
+        const explanationContent = document.createElement('div');
+        explanationContent.className = 'explanation-content';
+        
+        const explanationIcon = document.createElement('span');
+        explanationIcon.className = 'explanation-icon';
+        explanationIcon.textContent = '💡';
+        
+        const explanationText = document.createElement('span');
+        explanationText.className = 'explanation-text';
+        explanationText.textContent = explanations[option];
+        
+        const expandHint = document.createElement('div');
+        expandHint.className = 'explanation-expand-hint';
+        expandHint.textContent = '▼ Toca para expandir';
+        
+        // Toggle expandir/colapsar
+        explanationContent.addEventListener('click', function() {
+          const isExpanded = explanationText.classList.toggle('expanded');
+          expandHint.textContent = isExpanded ? '▲ Toca para colapsar' : '▼ Toca para expandir';
+        });
+        
+        explanationContent.appendChild(explanationIcon);
+        explanationContent.appendChild(explanationText);
+        explanationWrapper.appendChild(explanationContent);
+        explanationWrapper.appendChild(expandHint);
+        
+        div.appendChild(explanationWrapper);
+      }
+      
+      container.appendChild(div);
+    });
+    
+    // Mensaje de resultado y frases motivacionales
+    const motivationalContainer = document.getElementById('motivational-container');
+    
+    if (wasSkipped) {
+      resultMessageEl.textContent = '🤷 No lo sabías';
+      resultMessageEl.className = 'warning';
+      playSkipSound();
+      
+      // Frase motivacional al saltar
+      if (motivationalContainer) {
+        const quote = motivationalQuotesError[Math.floor(Math.random() * motivationalQuotesError.length)];
+        motivationalContainer.innerHTML = '<div class="motivational-quote error-quote">' +
+          '<span class="quote-emoji">' + quote.emoji + '</span>' +
+          '<span class="quote-text">' + quote.text + '</span>' +
+        '</div>';
+      }
+      
+    } else if (!hasSelection) {
+      resultMessageEl.textContent = '⚠️ No seleccionaste ninguna opción';
+      resultMessageEl.className = 'warning';
+      
+    } else if (isCorrect) {
+      const messages = ['✅ ¡Correcto!', '🎯 ¡Excelente!', '✨ ¡Muy bien!', '👍 ¡Perfecto!'];
+      resultMessageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+      resultMessageEl.className = 'success';
+      playCorrectSound();
+      
+      // Frase motivacional al acertar (cada ciertos aciertos o rachas)
+      const totalCorrect = parseInt(localStorage.getItem(TOTAL_CORRECT_KEY) || '0');
+      if (motivationalContainer && (totalCorrect % 10 === 0 || streak === 3 || streak === 7)) {
+        const quote = motivationalQuotesSuccess[Math.floor(Math.random() * motivationalQuotesSuccess.length)];
+        motivationalContainer.innerHTML = '<div class="motivational-quote success-quote">' +
+          '<span class="quote-emoji">' + quote.emoji + '</span>' +
+          '<span class="quote-text">' + quote.text + '</span>' +
+        '</div>';
+      }
+      
+    } else {
+      resultMessageEl.textContent = '❌ Incorrecto';
+      resultMessageEl.className = 'error';
+      playWrongSound();
+      
+      // Animación shake
+      container.classList.add('shake');
+      setTimeout(function() { container.classList.remove('shake'); }, 500);
+      
+      if (navigator.vibrate) navigator.vibrate(150);
+      
+      // Frase motivacional al fallar
+      if (motivationalContainer) {
+        const quote = motivationalQuotesError[Math.floor(Math.random() * motivationalQuotesError.length)];
+        motivationalContainer.innerHTML = '<div class="motivational-quote error-quote">' +
+          '<span class="quote-emoji">' + quote.emoji + '</span>' +
+          '<span class="quote-text">' + quote.text + '</span>' +
+        '</div>';
+      }
+    }
+    
+    // Animaciones de entrada
+    container.style.opacity = '0';
+    container.style.transform = 'translateY(10px)';
+    setTimeout(function() {
+      container.style.transition = 'all 0.3s ease';
+      container.style.opacity = '1';
+      container.style.transform = 'translateY(0)';
+    }, 0);
+    
+    resultMessageEl.style.animation = 'fadeIn 0.3s ease';
+    
+    // Celebración épica
+    if (showCelebration) {
+      setTimeout(function() { createEpicCelebration(streak); }, 300);
+    }
+    
+    // Limpiar sessionStorage
+    setTimeout(function() {
+      sessionStorage.removeItem(SHUFFLE_KEY);
+      sessionStorage.removeItem(SELECTION_KEY);
+      sessionStorage.removeItem(EXPLANATIONS_KEY);
+      sessionStorage.removeItem(SKIPPED_KEY);
+    }, 100);
+  }
+  
+  // Ejecutar una sola vez
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showResults);
+  } else {
+    showResults();
+  }
+})();
+</script>
+
+<style>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.streak-display { animation: none; }
+.streak-badge .streak-icon { animation: flicker 1.5s ease-in-out infinite; }
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@media (max-width: 480px) {
+  .streak-badge { padding: 4px 10px; font-size: 13px; }
+  .streak-number { font-size: 14px; }
+}
+</style>
