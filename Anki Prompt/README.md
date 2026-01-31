@@ -10,7 +10,7 @@ y no dejarlo todo para el final
 
 ### Ventajas 
 - Proceso de generación de preguntas semiautomatizado (tanto abiertas como MCQ)
-- Prompts más avanzados como MCQ 5.3 contienen análisis de sesgos de pregunta, haciendo estas más difíciles y similares a un examen 
+- Prompts más avanzados contienen análisis de sesgos de pregunta, haciendo estas más difíciles y similares a un examen 
 - Taxonomía de bloom editable por el usuario dependiendo de la preferencia del usuario
 - Comparación de documentos (ej: power y libros)
 - Práctica en cualquier momento del día, 5 min son suficientes. Y en cualquier lugar: cama, sofá, bus, metro...
@@ -18,18 +18,22 @@ y no dejarlo todo para el final
 - Aprendizaje coherente con la curva del olvido
 
 ### Desventajas
-- Los MCQ son los más actualizados, los de preguntas abiertas todavía están en proceso
+- Los MCQ son los más actualizados, los de preguntas abiertas todavía están en proceso.
 - Anki es de pago en dispositivos Apple. Es gratis en dispositivos Windows, Android, etc.
-- El estudiante se tendrá que adaptar primero al programa 
+- El estudiante se tendrá que adaptar primero al programa.
 
 ## ⚖️ Licencia y Copyright
 
-**Copyright © 2025 Vicente Torregrosa Expósito. Todos los derechos reservados.**
+**Copyright © 2026 Vicente Torregrosa Expósito. Todos los derechos reservados.**
 
-Este trabajo está protegido por leyes de derechos de autor. No está permitido:
-- ❌ Copiar o reproducir el código
-- ❌ Modificar o crear trabajos derivados
-- ❌ Distribuir o vender
-- ❌ Uso comercial
+Se concede permiso para usar y copiar el contenido de este repositorio
+con fines personales, educativos o de investigación.
+
+No se permite modificar, redistribuir, publicar, sublicenciar,
+vender, integrar en productos comerciales ni crear obras derivadas
+a partir de este contenido sin autorización expresa y por escrito del autor.
+
+Todo el contenido de este repositorio —incluyendo prompts, scripts,
+plantillas, documentación y código— es propiedad exclusiva del autor.
 
 Para solicitar permisos especiales, contactar a: vicentetoex2005@gmail.com
