@@ -1,0 +1,35 @@
+## ARQUITECTURA COMPLETA DE 3 PROMPTS
+
+```
+┌─────────────────────────────────────────┐
+│  PROMPT 1: GENERADOR PRINCIPAL          │
+│  Input: Documento                       │
+│  Output: Banco inicial (30-70 Q)        │
+│          + Informe técnico              │
+│  Características: Cobertura amplia,     │
+│                   distribución inicial  │
+└──────────────┬──────────────────────────┘
+               │
+               ├─────────────────────────────┐
+               │                             │
+               ▼                             ▼
+┌──────────────────────────────┐  ┌──────────────────────────────┐
+│  PROMPT 2: VALIDACIÓN        │  │  PROMPT 3: COMPLEMENTARIAS   │
+│  Input: Banco + Documento    │  │  Input: Banco + Informes +   │
+│  Output: Diagnóstico         │  │         Documento            │
+│          + Fiabilidad        │  │  Output: +5-30 preguntas     │
+│          + Recomendaciones   │  │          + Informe expansión │
+│  Características: Sin correc-│  │  Características: Evita dupl,│
+│  ción, solo análisis         │  │  complementa cobertura/prof  │
+└──────────────┬───────────────┘  └──────────────┬───────────────┘
+               │                                  │
+               └──────────────┬───────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │  Iteración opcional │
+                    │  (máx 3 ciclos)     │
+                    │  Prompt 3 → Prompt 2│
+                    └─────────────────────┘
+```
+**Validación** y **Complementarias** en los DLC's
