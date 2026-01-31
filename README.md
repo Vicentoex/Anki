@@ -81,13 +81,15 @@ Abre un **pull request** o crea un **issue** para discutir ideas.
 ---
 ## Licencia
 Copyright © 2026 Vicente Torregrosa Expósito. Todos los derechos reservados.
-Este trabajo está protegido por leyes de derechos de autor. No está permitido:
-la copia, distribución, modificación, uso comercial,
-publicación o reutilización de cualquier parte de este repositorio sin
-autorización expresa y por escrito del autor.
+Este trabajo está protegido por leyes de derechos de autor. Se concede permiso para usar y copiar el contenido de este repositorio
+con fines personales, educativos o de investigación.
 
-El contenido de este repositorio, incluyendo pero no limitado a prompts,
-scripts, plantillas, documentación y código, es propiedad exclusiva del autor.
+No se permite modificar, redistribuir, publicar, sublicenciar,
+vender, integrar en productos comerciales ni crear obras derivadas
+a partir de este contenido sin autorización expresa y por escrito del autor.
+
+Todo el contenido de este repositorio —incluyendo prompts, scripts,
+plantillas, documentación y código— es propiedad exclusiva del autor.
 
 
 Para solicitar permisos especiales, contactar a: vicentetoex2005@gmail.com
