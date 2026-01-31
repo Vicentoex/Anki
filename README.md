@@ -79,11 +79,18 @@ Las contribuciones son bienvenidas:
 Abre un **pull request** o crea un **issue** para discutir ideas.
 
 ---
+## Licencia
+Copyright © 2026 Vicente Torregrosa Expósito. Todos los derechos reservados.
+Este trabajo está protegido por leyes de derechos de autor. No está permitido:
+la copia, distribución, modificación, uso comercial,
+publicación o reutilización de cualquier parte de este repositorio sin
+autorización expresa y por escrito del autor.
 
-## 📜 Licencia
+El contenido de este repositorio, incluyendo pero no limitado a prompts,
+scripts, plantillas, documentación y código, es propiedad exclusiva del autor.
 
-Este proyecto está disponible bajo la licencia MIT.  
-Úsalo, modifícalo y compártelo libremente.
+
+Para solicitar permisos especiales, contactar a: vicentetoex2005@gmail.com
 
 ---
 
