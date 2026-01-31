@@ -1,4 +1,4 @@
-<!-- Front Template (Anverso) - Diseño Minimalista Optimizado -->
+<!-- Front Template (Anverso) - Diseño Ω Optimizado -->
 <div class="helper-text">Selecciona tu respuesta</div>
 
 <div class="question-container">
@@ -23,105 +23,150 @@
   Atajos: <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> para opciones · <kbd>N</kbd> para saltar
 </div>
 
+<!-- Elemento oculto para obtener el texto de forma segura -->
+<div id="anverso-data" style="display:none;">{{Anverso}}</div>
+<div id="opcion1-data" style="display:none;">{{Opción 1}}</div>
+<div id="opcion2-data" style="display:none;">{{Opción 2}}</div>
+<div id="opcion3-data" style="display:none;">{{Opción 3}}</div>
+<div id="exp1-data" style="display:none;">{{E 1}}</div>
+<div id="exp2-data" style="display:none;">{{E 2}}</div>
+<div id="exp3-data" style="display:none;">{{E 3}}</div>
+
 <script>
 (function() {
+  // Función para obtener texto de forma segura (evita problemas con backticks)
+  function getSafeText(elementId) {
+    var el = document.getElementById(elementId);
+    return el ? el.textContent.trim() : '';
+  }
+  
   // Generamos una clave única basada en el contenido de la pregunta
   function generateQuestionKey(content) {
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
+    var hash = 0;
+    for (var i = 0; i < content.length; i++) {
+      var char = content.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash;
     }
     return 'anki_q_' + Math.abs(hash);
   }
   
-  const questionText = `{{Anverso}}`.trim();
-  const questionKey = generateQuestionKey(questionText);
+  var questionText = getSafeText('anverso-data');
+  var questionKey = generateQuestionKey(questionText);
   
   // Claves únicas para esta pregunta específica
-  const SHUFFLE_KEY = questionKey + '_shuffle';
-  const SELECTION_KEY = questionKey + '_selection';
-  const EXPLANATIONS_KEY = questionKey + '_explanations';
-  const SKIPPED_KEY = questionKey + '_skipped';
+  var SHUFFLE_KEY = questionKey + '_shuffle';
+  var SELECTION_KEY = questionKey + '_selection';
+  var EXPLANATIONS_KEY = questionKey + '_explanations';
+  var SKIPPED_KEY = questionKey + '_skipped';
   
   // Array con las opciones originales y sus explicaciones
-  const optionsData = [
-    { text: `{{Opción 1}}`.trim(), explanation: `{{E 1}}`.trim() },
-    { text: `{{Opción 2}}`.trim(), explanation: `{{E 2}}`.trim() },
-    { text: `{{Opción 3}}`.trim(), explanation: `{{E 3}}`.trim() }
-  ].filter(opt => opt.text !== '');
+  var optionsData = [
+    { text: getSafeText('opcion1-data'), explanation: getSafeText('exp1-data') },
+    { text: getSafeText('opcion2-data'), explanation: getSafeText('exp2-data') },
+    { text: getSafeText('opcion3-data'), explanation: getSafeText('exp3-data') }
+  ].filter(function(opt) { return opt.text !== ''; });
   
   // Fisher-Yates para barajar
   function shuffleArray(array) {
-    const arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+    var arr = array.slice();
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = temp;
     }
     return arr;
   }
   
+  // Función segura para sessionStorage
+  function safeSessionSet(key, value) {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (e) {
+      console.log('sessionStorage not available');
+    }
+  }
+  
+  function safeSessionGet(key) {
+    try {
+      return sessionStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  function safeSessionRemove(key) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {}
+  }
+  
   // Función para mostrar respuesta (compatible con todas las plataformas)
   function showAnswerCard() {
-    if (typeof window.showAnswer !== 'undefined') {
+    if (typeof window.showAnswer === 'function') {
       window.showAnswer();
-    } else if (typeof pycmd !== 'undefined') {
+    } else if (typeof pycmd === 'function') {
       pycmd('ans');
     } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cb) {
       window.webkit.messageHandlers.cb.postMessage('ans');
+    } else if (typeof AnkiDroidJS !== 'undefined') {
+      AnkiDroidJS.ankiShowAnswer();
     }
   }
   
   // Referencias a los inputs para atajos de teclado
-  let optionInputs = [];
+  var optionInputs = [];
+  
+  // Referencia al handler para poder removerlo
+  var keyHandler = null;
   
   function generateOptions() {
-    const container = document.getElementById('options-container-front');
+    var container = document.getElementById('options-container-front');
     if (!container || optionsData.length === 0) return;
     
     // Limpiar selección previa y skipped
-    sessionStorage.removeItem(SELECTION_KEY);
-    sessionStorage.removeItem(SKIPPED_KEY);
+    safeSessionRemove(SELECTION_KEY);
+    safeSessionRemove(SKIPPED_KEY);
     
     // Barajar las opciones
-    const shuffledOptions = shuffleArray(optionsData);
+    var shuffledOptions = shuffleArray(optionsData);
     
     // Guardar el orden barajado para esta pregunta específica
-    sessionStorage.setItem(SHUFFLE_KEY, JSON.stringify(shuffledOptions.map(o => o.text)));
+    safeSessionSet(SHUFFLE_KEY, JSON.stringify(shuffledOptions.map(function(o) { return o.text; })));
     
     // Guardar el mapeo de explicaciones
-    const explanationsMap = {};
-    shuffledOptions.forEach(opt => {
+    var explanationsMap = {};
+    shuffledOptions.forEach(function(opt) {
       explanationsMap[opt.text] = opt.explanation;
     });
-    sessionStorage.setItem(EXPLANATIONS_KEY, JSON.stringify(explanationsMap));
+    safeSessionSet(EXPLANATIONS_KEY, JSON.stringify(explanationsMap));
     
     // Limpiar contenedor
     container.innerHTML = '';
     optionInputs = [];
     
     // Teclas para atajos (J, K, L)
-    const keys = ['J', 'K', 'L'];
+    var keys = ['J', 'K', 'L'];
     
     // Crear los radio buttons
-    shuffledOptions.forEach((option, index) => {
-      const optionDiv = document.createElement('div');
+    shuffledOptions.forEach(function(option, index) {
+      var optionDiv = document.createElement('div');
       optionDiv.className = 'option-card';
       
-      const label = document.createElement('label');
+      var label = document.createElement('label');
       label.className = 'option-label';
       
       // Indicador de tecla
-      const keyIndicator = document.createElement('span');
+      var keyIndicator = document.createElement('span');
       keyIndicator.className = 'option-key';
       keyIndicator.textContent = keys[index] || '';
       
       // Crear el contenedor del radio button
-      const radioWrapper = document.createElement('div');
+      var radioWrapper = document.createElement('div');
       radioWrapper.className = 'radio-wrapper';
       
-      const input = document.createElement('input');
+      var input = document.createElement('input');
       input.type = 'radio';
       input.name = 'mcq_choice';
       input.value = option.text;
@@ -131,20 +176,20 @@
       // Guardar referencia para atajos
       optionInputs.push(input);
       
-      const customRadio = document.createElement('span');
+      var customRadio = document.createElement('span');
       customRadio.className = 'custom-radio';
       
-      const optionText = document.createElement('span');
+      var optionText = document.createElement('span');
       optionText.className = 'option-text';
       optionText.textContent = option.text;
       
       // Guardar la selección cuando cambie
       input.addEventListener('change', function() {
-        sessionStorage.setItem(SELECTION_KEY, option.text);
-        sessionStorage.removeItem(SKIPPED_KEY);
+        safeSessionSet(SELECTION_KEY, option.text);
+        safeSessionRemove(SKIPPED_KEY);
         
         // Actualizar estilos visuales
-        container.querySelectorAll('.option-card').forEach(card => {
+        container.querySelectorAll('.option-card').forEach(function(card) {
           card.classList.remove('selected');
         });
         optionDiv.classList.add('selected');
@@ -152,6 +197,11 @@
         // Vibración suave en móviles
         if (navigator.vibrate) {
           navigator.vibrate(10);
+        }
+        
+        // Remover el listener de teclado antes de cambiar
+        if (keyHandler) {
+          document.removeEventListener('keydown', keyHandler, true);
         }
         
         // Mostrar respuesta automáticamente
@@ -172,66 +222,62 @@
   
   // Botón "No lo sé"
   function handleSkip() {
-    sessionStorage.removeItem(SELECTION_KEY);
-    sessionStorage.setItem(SKIPPED_KEY, 'true');
+    safeSessionRemove(SELECTION_KEY);
+    safeSessionSet(SKIPPED_KEY, 'true');
     
     // Vibración
     if (navigator.vibrate) {
       navigator.vibrate(20);
     }
     
+    // Remover el listener de teclado antes de cambiar
+    if (keyHandler) {
+      document.removeEventListener('keydown', keyHandler, true);
+    }
+    
     showAnswerCard();
   }
   
-  const skipBtn = document.getElementById('skip-btn');
+  var skipBtn = document.getElementById('skip-btn');
   if (skipBtn) {
     skipBtn.addEventListener('click', handleSkip);
   }
   
-  // Atajos de teclado (J, K, L, N)
-  function handleKeyPress(e) {
+  // Atajos de teclado (J, K, L, N) - con capture para interceptar antes que Anki
+  keyHandler = function(e) {
     // Ignorar si hay un input de texto activo
     if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
     if (e.target.tagName === 'TEXTAREA') return;
     
-    const key = e.key.toLowerCase();
+    var key = e.key.toLowerCase();
+    
+    // Solo interceptar nuestras teclas específicas
+    if (['j', 'k', 'l', 'n'].indexOf(key) === -1) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
     
     // J, K, L para opciones
     if (key === 'j' && optionInputs[0]) {
-      e.preventDefault();
       optionInputs[0].checked = true;
       optionInputs[0].dispatchEvent(new Event('change'));
     } else if (key === 'k' && optionInputs[1]) {
-      e.preventDefault();
       optionInputs[1].checked = true;
       optionInputs[1].dispatchEvent(new Event('change'));
     } else if (key === 'l' && optionInputs[2]) {
-      e.preventDefault();
       optionInputs[2].checked = true;
       optionInputs[2].dispatchEvent(new Event('change'));
     } else if (key === 'n') {
       // N para "No lo sé"
-      e.preventDefault();
       handleSkip();
     }
-  }
+  };
   
-  document.addEventListener('keydown', handleKeyPress);
+  // Usar capture: true para interceptar antes que Anki
+  document.addEventListener('keydown', keyHandler, true);
   
   // Generar opciones inicialmente
   generateOptions();
-  
-  // Verificación periódica
-  let checkCount = 0;
-  const checkInterval = setInterval(function() {
-    checkCount++;
-    const container = document.getElementById('options-container-front');
-    if (container && !container.querySelector('input[type="radio"]')) {
-      generateOptions();
-    }
-    if (checkCount >= 10) {
-      clearInterval(checkInterval);
-    }
-  }, 100);
 })();
 </script>
