@@ -1,10 +1,5 @@
->DLC's
-[[Datos/Anki/DLC's/Verificación 5.3]]
-[[Datos/Anki/DLC's/Validación-Fiabilidad 5.3]]
-[[Datos/Anki/DLC's/MCQ 5.3 Conceptos]]
-[[Datos/Anki/DLC's/GENERADOR DE PREGUNTAS COMPLEMENTARIAS|GENERADOR DE PREGUNTAS COMPLEMENTARIAS]]
 
-# GENERADOR DE PREGUNTAS TIPO TEST — NIVEL MIR/PIR
+# GENERADOR DE PREGUNTAS TIPO TEST — Omega
 
 ## TAREA
 Generar banco de preguntas tipo test sobre documento(s) suministrado(s). Español formal. 
@@ -26,9 +21,9 @@ plausibilidad_distractores = 0.48-0.52  # Similitud con respuesta correcta (muy 
 ```
 
 **Distribución Bloom (configurable por usuario):**
-- Recordar: 40% ±5
-- Comprender: 30% ±5  
-- Aplicar: 30% ±5
+- Recordar: 30% ±5
+- Comprender: 25% ±5  
+- Aplicar: 25% ±5
 - Analizar: 20% ±5
 
 **Multi-documento:** Si hay 2 o más documentos, priorizar contradicciones en caso de contradicciones (hacer preguntas de aquello que salga en uno y no en otro). Documentar contradicción en informe.
@@ -376,7 +371,6 @@ Al generar cada pregunta:
 ```
 
 ---
----
 
 ## GENERACIÓN DE PREGUNTAS
 
@@ -384,7 +378,7 @@ Al generar cada pregunta:
 Claro, auto-contenido, 15-40 palabras. Evitar dobles negaciones. Una sola respuesta correcta posible. **Basado exclusivamente en documento.**
 
 ### Opciones
- Opción 1 / Opción 2 / Opción 3`
+ Opción 1 / Opción 2 / Answer`
 
 **Longitud uniforme:** Contar palabras de cada opción. Calcular media. Cada opción debe estar en rango media ±10%. Si fuera → ajustar.
 
@@ -413,9 +407,6 @@ Claro, auto-contenido, 15-40 palabras. Evitar dobles negaciones. Una sola respue
 
 ### Cita textual
 Fragmento literal del documento (≥3 palabras) que soporte respuesta correcta. Anotar ubicación aproximada.
-
-### Answer
-Byte-a-byte idéntico a opción correcta, sin prefijo:  [texto completo]
 
 ### Bloom
 - **Recordar:** definición, dato, nombre, identificar, listar, definir, reconocer.
@@ -451,35 +442,40 @@ Si duplicado obvio (misma información, mismo enfoque) → reescribir con enfoqu
 
 **Cabecera exacta:**
 ```
-| Nº | Pregunta | Opción 1 | Opción 2 | Opción 3 | Answer | Nota | Bloom | Confianza |
+| Nº | Pregunta | Opción1 | Opción2 | Answer | N1 | N2 | NR | Bloom | Confianza |
 ```
 
 **Columnas:**
 
 - **Nº:** Secuencial (1, 2, 3...)
 - **Pregunta:** Enunciado completo
-- **Opción 1, 2, 3** 
-- **Answer:** Byte-a-byte idéntico a opción correcta
-- **Nota:** →
+- **Opción 1, 2, Answer**
+- **Answer:** Opción correcta
+- **N1; N2; N3
+	- Características
+		-  Cita entre comillas simples
+		- Explicación máx 50-60 palabras 
+		- Solo texto, `:` y `;` (prohibido `|`, `"`, saltos línea)
+	- N1: →
 ```
-  \'cita textual\'; No son las otras opciones porque [palabra clave o frase clave de distractor] y [palabra clave o frase clave de distractor]
+  Explicación + \'cita textual\'justificando porque Opción 1 no es correcta
 ```
-  - Cita entre comillas simples
-  - Separador: `;` después de cita
-  - Explicación máx 50-60 palabras 
-  - Solo texto, `:` y `;` (prohibido `|`, `"`, saltos línea)
+	- N2: →
+```
+  Explicación + \'cita textual\' justificando porque Opción 2 no es correcta
+```
+	- NR: →
+```
+  Explicación + \'cita textual\' justificando porque Answer es correcta
+```
+  
   
 - **Bloom:** Recordar | Comprender | Aplicar | Analizar
 - **Confianza:** 0.00-1.00 calculada como: ``` Confianza = (Relevancia × 0.35) + (Cita_válida × 0.25) + (Distractores_plausibles × 0.25) + (Fidelidad × 0.15) ```
 
-**Ejemplo Nota:**
-```
-\'Los IECA bloquean enzima convertidora de angiotensina\'; No son las otras opciones porque [Byte-a-byte idéntico a opción 1, sin prefijo, o palabra clave que resuma la alternativa, sin poner el número de opción] describe ARA-II que bloquean receptores downstream y [Byte-a-byte idéntico a opción 2, sin prefijo, o palabra clave que resuma la alternativa, sin poner el número de opción] describe inhibidores de renina upstream
-```
-
 ---
 
-### Informe Técnico (máx 400 palabras)
+### Informe Técnico
 
 **Formato:** Párrafo continuo, separado con `;`
 **Contenido obligatorio:**
@@ -488,7 +484,7 @@ Si duplicado obvio (misma información, mismo enfoque) → reescribir con enfoqu
 **Objetivo:** base [N]; densidad ajustada [factor]; final [N]
 **Cuotas asignadas:** ESENCIAL [N, %]; TRONCAL [N, %]; SUBIDEA [N, %]; MENOR [N, %]
 **Generadas:** total [N]; ESENCIAL [N, %real]; TRONCAL [N, %real]; SUBIDEA [N, %real]; MENOR [N, %real]
-**Bloom:** Recordar [N, %]; Comprender [N, %]; Aplicar [N, %]; Analizar [N, %]; target [distribución configurada]; desviación [máx delta%]
+**Bloom:** Recordar [N, %]; Comprender [N, %]; Aplicar [N, %];Analizar [N, %]; target [distribución configurada]; desviación [máx delta%]
 **Confianza:** promedio [0.XX]; ESENCIAL [0.XX]; TRONCAL [0.XX]; SUBIDEA [0.XX]; MENOR [0.XX]
 **Matriz cobertura ESENCIAL:** [Concepto1: N preguntas (R:X, C:X, A:X)]; [Concepto2: ...]; cobertura [%conceptos con ≥2 preguntas]
 **NO_CUBIERTOS:** TRONCAL [N conceptos: razones]; SUBIDEA [N: razones]; conceptos con info insuficiente [N: nombres]
@@ -508,7 +504,7 @@ No mostrar razonamiento interno.
 **Durante generación, si se detecta:**
 ```
 Confianza promedio <0.65 tras 20 preguntas → ampliar tolerancia distractores a 0.45-0.55; documentar en informe
->30% preguntas INCOMPLETO → bajar Bloom (Aplicar→Comprender→Recordar→Analizar); si persiste documentar "documento insuficiente"
+>30% preguntas INCOMPLETO → bajar Bloom (Analizar→Aplicar→Comprender→Recordar); si persiste documentar "documento insuficiente"
 Cuota ESENCIAL inalcanzable → reclasificar top-3 TRONCAL como ESENCIAL; recalcular cuotas; documentar reclasificación
 Bloom imposible (contenido homogéneo) → permitir ±10% desviación; documentar adaptación
 ``````
