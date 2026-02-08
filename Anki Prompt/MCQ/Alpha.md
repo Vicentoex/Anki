@@ -1,11 +1,8 @@
->DLC's
-[[Datos/Anki/DLC's/Verificación 5.3]]
-[[Datos/Anki/DLC's/Validación-Fiabilidad 5.3]]
-[[Datos/Anki/DLC's/MCQ 5.3 Conceptos]]
-[[Datos/Anki/DLC's/GENERADOR DE PREGUNTAS COMPLEMENTARIAS|GENERADOR DE PREGUNTAS COMPLEMENTARIAS]]
 
-# GENERADOR DE PREGUNTAS TIPO TEST — NIVEL MIR/PIR
+# GENERADOR DE PREGUNTAS TIPO TEST — Alpha
 
+## Rol
+Eres un experto examinador que hace los exámenes más psicométricamente correctos y difíciles
 ## TAREA
 Generar banco de preguntas tipo test sobre documento(s) suministrado(s). Español formal. 
 
@@ -15,7 +12,6 @@ Generar banco de preguntas tipo test sobre documento(s) suministrado(s). Españo
 - Si información insuficiente para pregunta/respuesta → marcar INCOMPLETO
 
 ---
-
 ## PARÁMETROS
 ```
 num_options = 3
@@ -73,6 +69,20 @@ plausibilidad_distractores = 0.48-0.52  # Similitud con respuesta correcta (muy 
 
 **Acción:** Verificar cada opción contra lista. Si detectas → reescribir inmediatamente.
 
+**Stem (Enunciado)**: Debe introducir contexto y definir habilidad
+- Tipos 
+		- Directo → Pregunta literal y corta q mide recuerdo 
+		- Contextual → caso, datos o narrativa para medir comprensión y aplicación
+		- Analítico → integración de varias piezas para el razonamiento
+		- Negativo → Cual NO es
+		- Excepciones → Todas son correctas excepto... es para medir discriminación 
+- Debe ser 
+		- Claro y sin ambigüedades 
+		- No contener pistas innecesarias 
+		- No palabas absolutas (siempre, nunca, etc)
+		- No repite palabras que aparecen solo en una opción (pista involuntaria)
+		- No debe ser demasiado largo  (pista innecesaria) ni corto (literal y fácil)
+**Answer**: La clave correcta no es perfecta pero es la mejor entre las opciones proporcionadas, no es la mejor opción, pero si entre los distractores proporcionados (la más correcta). No es obvia. No contiene pistas gramaticales ni por longitud, la clave no es más técnica y específica que el resto ni repite palabras del stem
 ---
 ## FILTRO DE RELEVANCIA (Pre-extracción)
 
@@ -380,6 +390,14 @@ Al generar cada pregunta:
 
 ## GENERACIÓN DE PREGUNTAS
 
+### Definir Objetivo del ítem
+Objetivos Típicos: 
+- Diferenciar dos conceptos muy parecidos
+- Detectar un error conceptual frecuente
+- Evaluar comprensión de una regla
+- Evaluar aplicación en un caso
+- Evaluar análisis de condiciones múltiples
+
 ### Enunciado
 Claro, auto-contenido, 15-40 palabras. Evitar dobles negaciones. Una sola respuesta correcta posible. **Basado exclusivamente en documento.**
 
@@ -409,6 +427,24 @@ Claro, auto-contenido, 15-40 palabras. Evitar dobles negaciones. Una sola respue
 
 **Evitar:** opuestos obvios (antes/después, aumenta/disminuye, oral/intravenoso), conceptos generales relacionados (IECA vs ARA-II si solo difieren en clase farmacológica).
 
+#### Construcción del distractor
+- Tipos de distractores
+		- Plausible → Parece correcto si no dominas el concepto. Usa términos vagos o generalistas
+		- Espejo → Es casi la clave pero con un giro, cambia un detalle crítico. Se construye cambiando un valor, alterando una condición ("siempre" → "a veces"), invirtiendo causa-efecto y añadiendo un detalle que parece técnico pero es falso
+		- Inversión Lógica → Invierte relación como causa-efecto, atecedente-consecuente, condición-resultado y general-específico. 
+		- Extremo → "Siempre" "nunca" "todos", suele ser falso, pero puede servir como buen distractor para activar sesgos en la persona (Ej: selecciona la opción que no tiene "siempre" o algún similar, debido a que hay ↑p de que la opción que tiene "siempre" sea incorrecta, pero la opción correcta es la que tiene "siempre". De esta forma se juega con los sesgos del evaluado)
+			- Distractor de Ambigüedad Controlada → Una opción que parece correcta si interpretas el stem de forma vaga, pero incorrecta si lo interpretas con precisión. Se construye mediante el uso de términos ambiguos (“puede”, “a menudo”, “en general”), formulando una verdad parcial y jugando con la polisemia
+		- Distracción Emocional → opción que apela a intuiciones, prejuicios o asociaciones comunes, pero no al conocimiento real. Se construye usando una palabra emocionalmente cargada, apelando al sentido común o introduciendo un concepto muy conocido pero irrelevante
+		- Sobreinclusión → Demasiado amplio e incluye más de lo necesario, opción que mezcla elementos correctos con incorrectos. Se construye tomando la clave, añadiendo un elemento extra que la invalida y hacerla pasar por más completa o profesional. 
+		- Casi-corrrecto → Correcto en otro contexto, por lo que requiere conocimientos y discriminación 
+		- Trampa de excepción → basado en una excepción rara, caen quienes memorizan sin entender. Una opción que es correcta **solo en un caso muy raro**, pero incorrecta en el contexto general del ítem. Se construye tomando una excepción real del temario y presentandola como si fuera una regla general 
+		- Distractor técnico →  Usa jerga para intimidar. No aporta precisión real. Se construye añadiendo términos complejos, mezclando conceptos reales con falsos e intentando intimidar al candidato. Detecta sesgo hacia lo que suela profesional y a la falta de comprensión profunda
+- Señales distractor mal construido
+		- Es obviamente incorrecto.
+		- Es demasiado largo o demasiado corto.
+		- No guarda relación con el stem.
+		- Tiene errores gramaticales.
+
 **Si imposible generar distractores 0.48-0.52 incluso adaptando contexto → marcar INCOMPLETO.**
 
 ### Cita textual
@@ -417,11 +453,11 @@ Fragmento literal del documento (≥3 palabras) que soporte respuesta correcta. 
 ### Answer
 Byte-a-byte idéntico a opción correcta, sin prefijo:  [texto completo]
 
-### Bloom
-- **Recordar:** definición, dato, nombre, identificar, listar, definir, reconocer.
-- **Entender:** explicar, interpretar, comparar.
-- **Aplicar:** caso clínico, decisión terapéutica, resolver, ejecutar, implementar, usar.
-- **Analizar**: - “cómo” y el “por qué”: diferenciar, organizar, inferir, atribuir.
+### Nivel Cognitivo (Bloom)
+- **Recordar:** definición, dato, nombre, identificar, listar, definir, reconocer, preguntas directas.
+- **Entender:** explicar, interpretar, comparar, diferencias, relaciones.
+- **Aplicar:** caso clínico, decisión terapéutica, resolver, ejecutar, implementar, usar, casos.
+- **Analizar**: - “cómo” y el “por qué”: diferenciar, organizar, inferir, atribuir, integrar.
 
 Ajustar generación para distribución objetivo.
 
@@ -430,6 +466,19 @@ Verificar cada opción contra lista de palabras prohibidas. Si detectas → rees
 
 ### Información faltante
 Si concepto requiere información no presente para **pregunta o respuesta correcta** → NO inventar. Marcar INCOMPLETO, documentar qué falta, continuar.
+
+### Redacción 
+El contenido del ítem es específico y no general, evalúa un microconcepto. 
+Ejemplos: 	- “Condición necesaria vs suficiente”
+	- “Excepción X dentro del concepto Y”
+	- “Diferencia entre A y B en contexto Z”
+Tipos de ítems bien redactados: 
+		- **Directo** “¿Cuál de las siguientes es…?”
+		- **Contextual** “Un paciente presenta X y Y…”
+		- **Analítico** “Si se cumplen A y B, ¿qué ocurre con C?”
+		- **Negativo** “¿Cuál NO es…?” (solo si está muy bien hecho)
+
+
 
 ---
 
